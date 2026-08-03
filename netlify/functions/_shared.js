@@ -12,7 +12,10 @@ function emptyAllData(){
 // connectLambda(event)를 먼저 호출해 수동으로 연결해줘야 한다. (Netlify Blobs "Lambda 호환 모드" 요구사항)
 function getReportStore(event){
   connectLambda(event);
-  return getStore(STORE_NAME);
+  // Netlify Blobs는 기본이 "즉시 일관성 아님"(eventual consistency)이라, 쓰기 후 최대 60초 동안은
+  // 새로고침할 때마다 다른 캐시본을 보게 될 수 있다 (예: SB만 있다가 SP만 있다가 왔다갔다).
+  // 이 리포트는 요청량이 매우 적으니, 항상 최신 값을 보도록 strong consistency로 강제한다.
+  return getStore({ name: STORE_NAME, consistency: 'strong' });
 }
 
 // 같은 (광고유형, 날짜, 캠페인, 광고그룹, 키워드, 매치타입[, 검색어]) 조합을 하나의 레코드로 보고,
