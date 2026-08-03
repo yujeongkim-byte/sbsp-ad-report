@@ -19,7 +19,7 @@ exports.handler = async function(event){
   }
 
   try{
-    const store = getReportStore();
+    const store = getReportStore(event);
     await store.setJSON(KEY, emptyAllData());
     return json(200, { ok: true });
   }catch(err){
