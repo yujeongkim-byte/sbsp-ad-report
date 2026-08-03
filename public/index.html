@@ -855,12 +855,15 @@ async function fetchAllDataFromServer(){
   return res.json();
 }
 
-async function uploadRecordsToServer(adType, keywordRecords, searchtermRecords){
+// batches: [{ adType:'SB'|'SP', keyword:[...], searchterm:[...] }, ...]
+// SB/SP를 각각 별도 요청으로 동시에 보내면 서버에서 서로의 쓰기를 덮어쓰는 경합이 생길 수 있어서,
+// 한 번의 업로드에 포함된 모든 adType을 반드시 하나의 요청으로 합쳐 보낸다.
+async function uploadRecordsToServer(batches){
   const secret = getSavedUploadSecret();
   const res = await fetch(`${API_BASE}/upload-data`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ secret, adType, keyword: keywordRecords, searchterm: searchtermRecords }),
+    body: JSON.stringify({ secret, batches }),
   });
   const body = await res.json().catch(()=>({}));
   if(!res.ok){ throw new Error(body.error || `업로드에 실패했습니다 (${res.status})`); }
@@ -979,14 +982,16 @@ function handleFiles(fileList){
 
     try{
       // 이번에 새로 읽은 분만 서버로 보내면, 서버가 기존 누적 데이터와 병합해서 모두가 같은 최신본을 보게 된다.
-      const uploadCalls = [];
+      // SB/SP가 함께 있어도 반드시 한 번의 요청으로 같이 보낸다 (따로따로 동시에 보내면 서버에서
+      // 서로의 저장 결과를 덮어쓰는 문제가 생길 수 있음).
+      const batches = [];
       if(incoming.SB.keyword.length || incoming.SB.searchterm.length){
-        uploadCalls.push(uploadRecordsToServer('SB', incoming.SB.keyword, incoming.SB.searchterm));
+        batches.push({ adType:'SB', keyword: incoming.SB.keyword, searchterm: incoming.SB.searchterm });
       }
       if(incoming.SP.keyword.length || incoming.SP.searchterm.length){
-        uploadCalls.push(uploadRecordsToServer('SP', incoming.SP.keyword, incoming.SP.searchterm));
+        batches.push({ adType:'SP', keyword: incoming.SP.keyword, searchterm: incoming.SP.searchterm });
       }
-      await Promise.all(uploadCalls);
+      await uploadRecordsToServer(batches);
 
       // 서버에 방금 반영된 최신(모두 공유) 누적 데이터를 다시 받아와 화면에 그린다.
       allData = await fetchAllDataFromServer();
