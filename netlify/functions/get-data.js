@@ -5,7 +5,7 @@ exports.handler = async function(event){
     return json(405, { error: 'GET만 지원합니다' });
   }
   try{
-    const store = getReportStore();
+    const store = getReportStore(event);
     const data = await store.get(KEY, { type: 'json' });
     return json(200, data || emptyAllData());
   }catch(err){
