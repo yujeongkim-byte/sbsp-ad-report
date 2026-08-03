@@ -24,7 +24,7 @@ exports.handler = async function(event){
   }
 
   try{
-    const store = getReportStore();
+    const store = getReportStore(event);
     const existing = (await store.get(KEY, { type: 'json' })) || emptyAllData();
 
     existing[adType].keyword = mergeRecords(existing[adType].keyword, payload.keyword || [], 'keyword');
