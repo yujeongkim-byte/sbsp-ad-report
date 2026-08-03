@@ -1,4 +1,4 @@
-const { getStore } = require('@netlify/blobs');
+const { getStore, connectLambda } = require('@netlify/blobs');
 
 const STORE_NAME = 'sbsp-report';
 const KEY = 'allData';
@@ -7,7 +7,11 @@ function emptyAllData(){
   return { SB: { keyword: [], searchterm: [] }, SP: { keyword: [], searchterm: [] } };
 }
 
-function getReportStore(){
+// 이 함수들은 옛 AWS Lambda 방식 핸들러 형태(exports.handler = (event, context) => ...)를 쓰고 있어서,
+// Netlify가 Blobs 접속 정보(siteID/token)를 자동으로 넣어주지 않는다. 그래서 getStore를 부르기 전에
+// connectLambda(event)를 먼저 호출해 수동으로 연결해줘야 한다. (Netlify Blobs "Lambda 호환 모드" 요구사항)
+function getReportStore(event){
+  connectLambda(event);
   return getStore(STORE_NAME);
 }
 
